@@ -115,6 +115,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                         p.createBB();
                     }
                     sock.write(p.bb);
+                    //处理拆包事件
                     if (!p.bb.hasRemaining()) {
                         sentCount++;
                         outgoingQueue.removeFirstOccurrence(p);
@@ -134,9 +135,11 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     // to attempt SASL authentication), or in either doIO() or
                     // in doTransport() if not.
                     disableWrite();
+                    //如果outgoingQueue为空取消对op_write事件的关注
                 } else {
                     // Just in case
                     enableWrite();
+                    //如果outgoingQueue不为空开始对op_write事件的关注
                 }
             }
         }
@@ -352,6 +355,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
+                //
                 doIO(pendingQueue, outgoingQueue, cnxn);
             }
         }

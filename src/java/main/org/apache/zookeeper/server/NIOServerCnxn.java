@@ -192,7 +192,7 @@ public class NIOServerCnxn extends ServerCnxn {
                         + ", likely client has closed socket");
             }
         }
-
+        //处理拆包事件
         if (incomingBuffer.remaining() == 0) { // have we read length bytes?
             packetReceived();
             incomingBuffer.flip();
@@ -226,7 +226,7 @@ public class NIOServerCnxn extends ServerCnxn {
                     boolean isPayload;
                     if (incomingBuffer == lenBuffer) { // start of next request
                         incomingBuffer.flip();
-                        isPayload = readLength(k);
+                        isPayload = readLength(k);//读取数据长度并创建一个该长度的buffer的数组
                         incomingBuffer.clear();
                     } else {
                         // continuation

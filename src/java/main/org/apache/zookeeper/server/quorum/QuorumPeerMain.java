@@ -96,8 +96,10 @@ public class QuorumPeerMain {
     protected void initializeAndRun(String[] args)
         throws ConfigException, IOException
     {
+        //用于处理配置文件
         QuorumPeerConfig config = new QuorumPeerConfig();
         if (args.length == 1) {
+            //如果参数个数为1 认为传入的为zoo.cnf
             config.parse(args[0]);
         }
 
@@ -126,6 +128,7 @@ public class QuorumPeerMain {
   
       LOG.info("Starting quorum peer");
       try {
+          //ServerCnxnFactory
           ServerCnxnFactory cnxnFactory = ServerCnxnFactory.createFactory();
           cnxnFactory.configure(config.getClientPortAddress(),
                                 config.getMaxClientCnxns());

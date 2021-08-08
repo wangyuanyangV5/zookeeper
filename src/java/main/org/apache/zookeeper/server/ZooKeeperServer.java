@@ -838,6 +838,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         } else {
             LOG.info("Client attempting to establish new session at "
                     + cnxn.getRemoteSocketAddress());
+            //sessionId 一开始为空，sessionId是由服务端开启
             createSession(cnxn, passwd, sessionTimeout);
         }
     }
