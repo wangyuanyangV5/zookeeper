@@ -75,6 +75,15 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
     public static long initializeNextSession(long id) {
         long nextSid = 0;
         nextSid = (System.currentTimeMillis() << 24) >> 8;
+        //当前时间戳，左移24位又右移了8位
+        //0000 0000 0000 0101 0101 0101 0101 0101 0101 0101 0101 0101 0101 0101 0101  0101
+        //0101 0101 0101 0101 0101 0101 0101 0101 0101 0101 0000 0000 0000 0000 0000 0000
+        //0000 0000 0101 0101 0101 0101 0101 0101 0101 0101 0101 0101 0000 0000 0000 0000
+        //id = 3  0011 左移56位  0000 0011 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
+        //0000 0000 0101 0101 0101 0101 0101 0101 0101 0101 0101 0101 0000 0000 0000 0000
+        //0000 0011 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000
+        //唯一的原因:在时间戳里添加了myId的因子
+        //0000 0011 0101 0101 0101 0101 0101 0101 0101 0101 0101 0101 0000 0000 0000 0000
         nextSid =  nextSid | (id <<56);
         return nextSid;
     }
@@ -174,6 +183,10 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
         if (s == null || s.isClosing()) {
             return false;
         }
+        //下一个session 超时时间
+        //当前时间12:03  timeout 120s  12:05
+        //默认是 (12:05 / 2s + 1) * 2s 默认跟ticketTime是一样大的，默认是2000ms  2s
+        //意思是下一次任务执行的时间
         long expireTime = roundToInterval(System.currentTimeMillis() + timeout);
         if (s.tickTime >= expireTime) {
             // Nothing needs to be done
@@ -233,14 +246,19 @@ public class SessionTrackerImpl extends Thread implements SessionTracker {
 
 
     synchronized public long createSession(int sessionTimeout) {
+        //1：生成一个唯一的sessionId
+        //2:在几个内存中存放这个session
+        //3:对session计算下一个过期时间以及进行特殊处理
         addSession(nextSessionId, sessionTimeout);
         return nextSessionId++;
     }
 
     synchronized public void addSession(long id, int sessionTimeout) {
+        //存放session过期时间
         sessionsWithTimeout.put(id, sessionTimeout);
         if (sessionsById.get(id) == null) {
             SessionImpl s = new SessionImpl(id, sessionTimeout, 0);
+            //存放session的具体信息SessionImpl
             sessionsById.put(id, s);
             if (LOG.isTraceEnabled()) {
                 ZooTrace.logTraceMessage(LOG, ZooTrace.SESSION_TRACE_MASK,

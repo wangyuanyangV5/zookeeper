@@ -374,12 +374,15 @@ public class ClientCnxn {
         this.sessionTimeout = sessionTimeout;
         this.hostProvider = hostProvider;
         this.chrootPath = chrootPath;
-
+        //跟zk服务器连接超时时间
         connectTimeout = sessionTimeout / hostProvider.size();
+        //读取数据超时时间
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
+        //负责基于底层socket跟zk服务端进行通信，发送数据过去
         sendThread = new SendThread(clientCnxnSocket);
+        //专门接受zk服务端的反向通知过来的event事件
         eventThread = new EventThread();
 
     }
@@ -851,6 +854,7 @@ public class ClientCnxn {
                      + ", initiating session");
             isFirstConnect = false;
             long sessId = (seenRwServerBefore) ? sessionId : 0;
+            //创建会话session
             ConnectRequest conReq = new ConnectRequest(0, lastZxid,
                     sessionTimeout, sessId, sessionPasswd);
             synchronized (outgoingQueue) {
@@ -859,8 +863,11 @@ public class ClientCnxn {
                 // TODO: here we have the only remaining use of zooKeeper in
                 // this class. It's to be eliminated!
                 if (!disableAutoWatchReset) {
+                    //监听一个znode的数据变化
                     List<String> dataWatches = zooKeeper.getDataWatches();
+                    //监听一个znode是否存在
                     List<String> existWatches = zooKeeper.getExistWatches();
+                    //监听一个znode下的子节点的变化
                     List<String> childWatches = zooKeeper.getChildWatches();
                     if (!dataWatches.isEmpty()
                                 || !existWatches.isEmpty() || !childWatches.isEmpty()) {
@@ -872,7 +879,7 @@ public class ClientCnxn {
                         h.setType(ZooDefs.OpCode.setWatches);
                         h.setXid(-8);
                         Packet packet = new Packet(h, new ReplyHeader(), sw, null, null);
-                        outgoingQueue.addFirst(packet);
+                        outgoingQueue.addFirst(packet);//分装了一个packet，立面放了一个需要施加的监听器
                     }
                 }
 
@@ -881,9 +888,11 @@ public class ClientCnxn {
                             OpCode.auth), null, new AuthPacket(0, id.scheme,
                             id.data), null, null));
                 }
+                //分装了一个连接请求
                 outgoingQueue.addFirst(new Packet(null, null, conReq,
                             null, null, readOnly));
             }
+            //只关注读写事件
             clientCnxnSocket.enableReadWriteOnly();
             if (LOG.isDebugEnabled()) {
                 LOG.debug("Session establishment request sent on "
@@ -990,6 +999,7 @@ public class ClientCnxn {
                         if (closing || !state.isAlive()) {
                             break;
                         }
+                        //在这里由sendThread负责跟zk服务器建立一个长连接
                         startConnect();
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
@@ -1039,8 +1049,10 @@ public class ClientCnxn {
                                         + Long.toHexString(sessionId));
                     }
                     if (state.isConnected()) {
+                        //IdleSend 已经多长时间没有发送消息到服务端了
                         int timeToNextPing = readTimeout / 2
                                 - clientCnxnSocket.getIdleSend();
+                        //是否需要发送ping到server
                         if (timeToNextPing <= 0) {
                             sendPing();
                             clientCnxnSocket.updateLastSend();
@@ -1211,9 +1223,11 @@ public class ClientCnxn {
                     + (isRO ? " (READ-ONLY mode)" : ""));
             KeeperState eventState = (isRO) ?
                     KeeperState.ConnectedReadOnly : KeeperState.SyncConnected;
+            //放入一个WatchedEvent事件
             eventThread.queueEvent(new WatchedEvent(
                     Watcher.Event.EventType.None,
                     eventState, null));
+            //底层TCP连接建立并且受到createSession响应就会有一个事件通知
         }
 
         void close() {
@@ -1305,6 +1319,7 @@ public class ClientCnxn {
         Packet packet = queuePacket(h, r, request, response, null, null, null,
                     null, watchRegistration);
         synchronized (packet) {
+            //直到请求返回响应
             while (!packet.finished) {
                 packet.wait();
             }

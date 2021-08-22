@@ -232,7 +232,8 @@ public class LearnerHandler extends Thread {
      */
     @Override
     public void run() {
-        try {            
+        try {
+
             ia = BinaryInputArchive.getArchive(new BufferedInputStream(sock
                     .getInputStream()));
             bufferedOutput = new BufferedOutputStream(sock.getOutputStream());
@@ -308,7 +309,8 @@ public class LearnerHandler extends Thread {
             
             /* we are sending the diff check if we have proposals in memory to be able to 
              * send a diff to the 
-             */ 
+             */
+            //如果follower刚跟leader进行连接，进行数据的同步
             ReentrantReadWriteLock lock = leader.zk.getZKDatabase().getLogLock();
             ReadLock rl = lock.readLock();
             try {
@@ -429,6 +431,7 @@ public class LearnerHandler extends Thread {
             bufferedOutput.flush();
             
             // Start sending packets
+            //把数据同步完成之后，启动一个线程，把数据发送给follower
             new Thread() {
                 public void run() {
                     Thread.currentThread().setName(
@@ -470,7 +473,8 @@ public class LearnerHandler extends Thread {
             // using the data
             //
             queuedPackets.add(new QuorumPacket(Leader.UPTODATE, -1, null, null));
-
+            //leader 2pc+过半写机制的实现
+            //接收follower返回的响应信息
             while (true) {
                 qp = new QuorumPacket();
                 ia.readRecord(qp, "packet");

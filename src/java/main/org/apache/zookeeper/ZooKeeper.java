@@ -437,13 +437,16 @@ public class ZooKeeper {
     {
         LOG.info("Initiating client connection, connectString=" + connectString
                 + " sessionTimeout=" + sessionTimeout + " watcher=" + watcher);
-
+        //zk的一些事件处理器
         watchManager.defaultWatcher = watcher;
-
+        //解析zk机器列表 分装成HostProvider(每次连接zk时随机提供一个机器地址供连接使用)
         ConnectStringParser connectStringParser = new ConnectStringParser(
                 connectString);
+
         HostProvider hostProvider = new StaticHostProvider(
                 connectStringParser.getServerAddresses());
+        //connectStringParser.getChrootPath() 设置znode的根目录 127.0.0.1:2181/host/path
+        //ClientCnxnSocketNIO
         cnxn = new ClientCnxn(connectStringParser.getChrootPath(),
                 hostProvider, sessionTimeout, this, watchManager,
                 getClientCnxnSocket(), canBeReadOnly);

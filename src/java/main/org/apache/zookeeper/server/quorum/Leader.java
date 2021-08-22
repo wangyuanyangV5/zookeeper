@@ -303,6 +303,7 @@ public class Leader {
                         s.setSoTimeout(self.tickTime * self.initLimit);
                         s.setTcpNoDelay(nodelay);
                         LearnerHandler fh = new LearnerHandler(s, Leader.this);
+                        //对于leader来说，走的是传统的BIO网络通信
                         fh.start();
                     } catch (SocketException e) {
                         if (stop) {
@@ -358,6 +359,8 @@ public class Leader {
             // Start thread that waits for connection requests from 
             // new followers.
             cnxAcceptor = new LearnerCnxAcceptor();
+            //leader：leader
+            //learner:follower
             cnxAcceptor.start();
             
             readyToStart = true;

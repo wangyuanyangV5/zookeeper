@@ -775,8 +775,10 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     
     public void processConnectRequest(ServerCnxn cnxn, ByteBuffer incomingBuffer) throws IOException {
         BinaryInputArchive bia = BinaryInputArchive.getArchive(new ByteBufferInputStream(incomingBuffer));
+
         ConnectRequest connReq = new ConnectRequest();
         connReq.deserialize(bia, "connect");
+
         if (LOG.isDebugEnabled()) {
             LOG.debug("Session establishment request from client "
                     + cnxn.getRemoteSocketAddress()

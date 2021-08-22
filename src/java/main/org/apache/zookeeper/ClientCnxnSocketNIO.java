@@ -78,6 +78,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     recvCount++;
                     readLength();
                 } else if (!initialized) {
+                    //如果是createsession
                     readConnectResult();
                     enableRead();
                     if (findSendablePacket(outgoingQueue,
@@ -100,6 +101,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         }
         if (sockKey.isWritable()) {
             synchronized(outgoingQueue) {
+                //从发送消息的队列取出一个Packet
                 Packet p = findSendablePacket(outgoingQueue,
                         cnxn.sendThread.clientTunneledAuthenticationInProgress());
 
@@ -118,11 +120,13 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     //处理拆包事件
                     if (!p.bb.hasRemaining()) {
                         sentCount++;
+                        //把已发送请求删除
                         outgoingQueue.removeFirstOccurrence(p);
                         if (p.requestHeader != null
                                 && p.requestHeader.getType() != OpCode.ping
                                 && p.requestHeader.getType() != OpCode.auth) {
                             synchronized (pendingQueue) {
+                                //把请求放入pendingQueue中
                                 pendingQueue.add(p);
                             }
                         }
@@ -355,7 +359,8 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                     sendThread.primeConnection();
                 }
             } else if ((k.readyOps() & (SelectionKey.OP_READ | SelectionKey.OP_WRITE)) != 0) {
-                //
+                //如果有读写事件可以执行
+                //此时就可以在这里执行一下网络io操作
                 doIO(pendingQueue, outgoingQueue, cnxn);
             }
         }

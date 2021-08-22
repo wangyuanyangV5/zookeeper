@@ -266,6 +266,8 @@ public class Learner {
         ByteArrayOutputStream bsid = new ByteArrayOutputStream();
         BinaryOutputArchive boa = BinaryOutputArchive.getArchive(bsid);
         boa.writeRecord(li, "LearnerInfo");
+
+
         qp.setData(bsid.toByteArray());
         
         writePacket(qp, true);

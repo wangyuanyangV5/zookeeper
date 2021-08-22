@@ -406,9 +406,9 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
     
     @Override
     public synchronized void start() {
-        loadDataBase();
+        loadDataBase();//加载数据到内存
         cnxnFactory.start();        
-        startLeaderElection();
+        startLeaderElection();//为leader选举做好初始化
         super.start();
     }
 
@@ -478,6 +478,8 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         if (myQuorumAddr == null) {
             throw new RuntimeException("My id " + myid + " not in the peer list");
         }
+        //zk本身提供几种选举算法0,1,2
+        //0这种算法是基于UDP网络连接，不可靠的网络连接 已废弃
         if (electionType == 0) {
             try {
                 udpSocket = new DatagramSocket(myQuorumAddr.getPort());
@@ -571,6 +573,7 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
         Election le=null;
                 
         //TODO: use a factory rather than a switch
+        //0,1,2已经废弃，目前来说仅仅支持3
         switch (electionAlgorithm) {
         case 0:
             le = new LeaderElection(this);
@@ -666,7 +669,8 @@ public class QuorumPeer extends Thread implements QuorumStats.Provider {
              */
             while (running) {
                 switch (getPeerState()) {
-                case LOOKING:
+                case LOOKING://如果当前是刚刚启动，当前状态为looking，在寻找leader过程中，
+                    // 如果没有投票就要发起投票给其他节点，如果有leader就让自己成为follower
                     LOG.info("LOOKING");
 
                     if (Boolean.getBoolean("readonlymode.enabled")) {

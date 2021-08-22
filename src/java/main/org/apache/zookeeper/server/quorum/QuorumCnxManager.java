@@ -186,6 +186,7 @@ public class QuorumCnxManager {
         }
         
         // If lost the challenge, then drop the new connection
+        //只能有myid大的向myid小的建立连接
         if (sid > self.getId()) {
             LOG.info("Have smaller server identifier, so dropping the " +
                      "connection: (" + sid + ", " + self.getId() + ")");
@@ -248,6 +249,7 @@ public class QuorumCnxManager {
         }
         
         //If wins the challenge, then close the new connection.
+        //如果是小于myid的机器发起的连接，则关闭连接
         if (sid < self.getId()) {
             /*
              * This replica might still believe that the connection to sid is
@@ -268,6 +270,7 @@ public class QuorumCnxManager {
 
             // Otherwise start worker threads to receive data.
         } else {
+            //创建一个SendWorker，RecvWorker来负责该socket的发生与接收消息
             SendWorker sw = new SendWorker(sock, sid);
             RecvWorker rw = new RecvWorker(sock, sid, sw);
             sw.setRecv(rw);
@@ -349,8 +352,10 @@ public class QuorumCnxManager {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Opening channel to server " + sid);
                 }
+                //zookeeper底层是直接基于java socket进行tcp协议通信的NIO
                 Socket sock = new Socket();
                 setSockOpts(sock);
+                //直接将socket链接到集群其他机器上
                 sock.connect(self.getView().get(sid).electionAddr, cnxTO);
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Connected to server " + sid);

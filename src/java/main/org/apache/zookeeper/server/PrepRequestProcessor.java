@@ -178,6 +178,7 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
 
     void addChangeRecord(ChangeRecord c) {
         synchronized (zks.outstandingChanges) {
+            //即将要处理的一个ChangeRecord
             zks.outstandingChanges.add(c);
             zks.outstandingChangesForPath.put(c.path, c);
         }
@@ -363,7 +364,10 @@ public class PrepRequestProcessor extends Thread implements RequestProcessor {
                 parentRecord = parentRecord.duplicate(request.hdr.getZxid());
                 parentRecord.childCount++;
                 parentRecord.stat.setCversion(newCversion);
+
+
                 addChangeRecord(parentRecord);
+                //添加了一个ChangeRecord
                 addChangeRecord(new ChangeRecord(request.hdr.getZxid(), path, s,
                         0, listACL));
                 break;

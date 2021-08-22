@@ -158,20 +158,23 @@ public class NIOServerCnxn extends ServerCnxn {
                     }
                 }
                 // if there is nothing left to send, we are done
+                //如果没有出现拆包事件就直接返回
                 if (bb.remaining() == 0) {
                     packetSent();
                     return;
                 }
             }
-
+            //走到这里后就说明拆包事件出现
             synchronized(this.factory){
                 sk.selector().wakeup();
                 if (LOG.isTraceEnabled()) {
                     LOG.trace("Add a buffer to outgoingBuffers, sk " + sk
                             + " is valid: " + sk.isValid());
                 }
+                //把剩余未发送的数据放入outgoingBuffers
                 outgoingBuffers.add(bb);
                 if (sk.isValid()) {
+                    //关心OP_WRITE
                     sk.interestOps(sk.interestOps() | SelectionKey.OP_WRITE);
                 }
             }
@@ -194,11 +197,14 @@ public class NIOServerCnxn extends ServerCnxn {
         }
         //处理拆包事件
         if (incomingBuffer.remaining() == 0) { // have we read length bytes?
+            //如果读取完毕就可以对请求进行处理
             packetReceived();
             incomingBuffer.flip();
             if (!initialized) {
+                //处理连接请求
                 readConnectRequest();
             } else {
+                //处理一般请求
                 readRequest();
             }
             lenBuffer.clear();
@@ -226,7 +232,8 @@ public class NIOServerCnxn extends ServerCnxn {
                     boolean isPayload;
                     if (incomingBuffer == lenBuffer) { // start of next request
                         incomingBuffer.flip();
-                        isPayload = readLength(k);//读取数据长度并创建一个该长度的buffer的数组
+                        //读取数据长度并创建一个该长度的buffer的数组
+                        isPayload = readLength(k);
                         incomingBuffer.clear();
                     } else {
                         // continuation
