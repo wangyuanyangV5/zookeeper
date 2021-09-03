@@ -167,7 +167,7 @@ public class ClientCnxn {
      * operation)
      */
     private volatile boolean closing = false;
-    
+
     /**
      * A set of ZooKeeper hosts this client could connect to.
      */
@@ -660,7 +660,7 @@ public class ClientCnxn {
         public EndOfStreamException(String msg) {
             super(msg);
         }
-        
+
         @Override
         public String toString() {
             return "EndOfStreamException: " + getMessage();
@@ -674,7 +674,7 @@ public class ClientCnxn {
             super(msg);
         }
     }
-    
+
     private static class SessionExpiredException extends IOException {
         private static final long serialVersionUID = -1388816932076193249L;
 
@@ -690,7 +690,7 @@ public class ClientCnxn {
             super(msg);
         }
     }
-    
+
     public static final int packetLen = Integer.getInteger("jute.maxbuffer",
             4096 * 1024);
 
@@ -701,7 +701,7 @@ public class ClientCnxn {
     class SendThread extends Thread {
         private long lastPingSentNs;
         private final ClientCnxnSocket clientCnxnSocket;
-        private Random r = new Random(System.nanoTime());        
+        private Random r = new Random(System.nanoTime());
         private boolean isFirstConnect = true;
 
         void readResponse(ByteBuffer incomingBuffer) throws IOException {
@@ -723,11 +723,11 @@ public class ClientCnxn {
                 return;
             }
             if (replyHdr.getXid() == -4) {
-                // -4 is the xid for AuthPacket               
+                // -4 is the xid for AuthPacket
                 if(replyHdr.getErr() == KeeperException.Code.AUTHFAILED.intValue()) {
-                    state = States.AUTH_FAILED;                    
-                    eventThread.queueEvent( new WatchedEvent(Watcher.Event.EventType.None, 
-                            Watcher.Event.KeeperState.AuthFailed, null) );            		            		
+                    state = States.AUTH_FAILED;
+                    eventThread.queueEvent( new WatchedEvent(Watcher.Event.EventType.None,
+                            Watcher.Event.KeeperState.AuthFailed, null) );
                 }
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Got auth sessionid:0x"
@@ -837,7 +837,7 @@ public class ClientCnxn {
         // Runnable
         /**
          * Used by ClientCnxnSocket
-         * 
+         *
          * @return
          */
         ZooKeeper.States getZkState() {
@@ -977,7 +977,7 @@ public class ClientCnxn {
 
         private static final String RETRY_CONN_MSG =
             ", closing socket connection and attempting reconnect";
-        
+
         @Override
         public void run() {
             clientCnxnSocket.introduce(this,sessionId);
@@ -1040,7 +1040,7 @@ public class ClientCnxn {
                     } else {
                         to = connectTimeout - clientCnxnSocket.getIdleRecv();
                     }
-                    
+
                     if (to <= 0) {
                         throw new SessionTimeoutException(
                                 "Client session timed out, have not heard from server in "
@@ -1106,14 +1106,18 @@ public class ClientCnxn {
                                             + ", unexpected error"
                                             + RETRY_CONN_MSG, e);
                         }
+                        //关闭连接，完成失败请求
                         cleanup();
                         if (state.isAlive()) {
+                            //发布一个断开连接的事件并清空监听器
                             eventThread.queueEvent(new WatchedEvent(
                                     Event.EventType.None,
                                     Event.KeeperState.Disconnected,
                                     null));
                         }
+                        //重新更新底层网络连接初始化的一个时间
                         clientCnxnSocket.updateNow();
+                        //重新初始化底层网络连接里最近一次发送请求和接受响应的时间
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
                 }
@@ -1166,13 +1170,16 @@ public class ClientCnxn {
         }
 
         private void cleanup() {
+            //客户端主动断开网络连接
             clientCnxnSocket.cleanup();
+            //对说有已经发送出去正在等待响应的请求，都进行完成，标识气失败了
             synchronized (pendingQueue) {
                 for (Packet p : pendingQueue) {
                     conLossPacket(p);
                 }
                 pendingQueue.clear();
             }
+            //对于没有发送出去的请求，同样进行完成，标识其失败
             synchronized (outgoingQueue) {
                 for (Packet p : outgoingQueue) {
                     conLossPacket(p);
@@ -1184,7 +1191,7 @@ public class ClientCnxn {
         /**
          * Callback invoked by the ClientCnxnSocket once a connection has been
          * established.
-         * 
+         *
          * @param _negotiatedSessionTimeout
          * @param _sessionId
          * @param _sessionPasswd

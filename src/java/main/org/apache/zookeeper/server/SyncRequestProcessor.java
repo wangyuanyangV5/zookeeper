@@ -117,6 +117,7 @@ public class SyncRequestProcessor extends Thread implements RequestProcessor {
                             if (snapInProcess != null && snapInProcess.isAlive()) {
                                 LOG.warn("Too busy to snap, skipping");
                             } else {
+                                //生成一份数据快照
                                 snapInProcess = new Thread("Snapshot Thread") {
                                         public void run() {
                                             try {

@@ -32,7 +32,7 @@ import org.apache.zookeeper.server.ZKDatabase;
 import org.apache.zookeeper.server.persistence.FileTxnSnapLog;
 
 /**
- * 
+ *
  * Just like the standard ZooKeeperServer. We just replace the request
  * processors: PrepRequestProcessor -> ProposalRequestProcessor ->
  * CommitProcessor -> Leader.ToBeAppliedRequestProcessor ->
@@ -55,18 +55,31 @@ public class LeaderZooKeeperServer extends QuorumZooKeeperServer {
     public Leader getLeader(){
         return self.leader;
     }
-    
+
     @Override
     protected void setupRequestProcessors() {
         RequestProcessor finalProcessor = new FinalRequestProcessor(this);
         RequestProcessor toBeAppliedProcessor = new Leader.ToBeAppliedRequestProcessor(
                 finalProcessor, getLeader().toBeApplied);
+
+
+        //首先把请求commit应用到自己内存数据库里
+        //接着发送commit请求给所有的follower，让follower也commit到自己内存数据库里去
+        //只要进入内存数据库，其他人就可以看到了
         commitProcessor = new CommitProcessor(toBeAppliedProcessor,
                 Long.toString(getServerId()), false);
         commitProcessor.start();
+
+
+        //必然是把请求从outstandingQueue里获取出来
+        //然后他就负责进行2pc的同步，第一步先将proposal写入本地事务日志里去
+        //第二步 先把proposal发送给所有的follower，所有的follower写入自己的本地事务日志里去
+        //第三步，等待所有的follower返回对这个请求的ack
         ProposalRequestProcessor proposalProcessor = new ProposalRequestProcessor(this,
                 commitProcessor);
         proposalProcessor.initialize();
+
+
         firstProcessor = new PrepRequestProcessor(this, proposalProcessor);
         ((PrepRequestProcessor)firstProcessor).start();
     }
@@ -75,13 +88,13 @@ public class LeaderZooKeeperServer extends QuorumZooKeeperServer {
     public int getGlobalOutstandingLimit() {
         return super.getGlobalOutstandingLimit() / (self.getQuorumSize() - 1);
     }
-    
+
     @Override
     public void createSessionTracker() {
         sessionTracker = new SessionTrackerImpl(this, getZKDatabase().getSessionWithTimeOuts(),
                 tickTime, self.getId());
     }
-    
+
     @Override
     protected void startSessionTracker() {
         ((SessionTrackerImpl)sessionTracker).start();
@@ -150,7 +163,7 @@ public class LeaderZooKeeperServer extends QuorumZooKeeperServer {
         }
         jmxServerBean = null;
     }
-    
+
     @Override
     public String getState() {
         return "leader";
@@ -158,13 +171,13 @@ public class LeaderZooKeeperServer extends QuorumZooKeeperServer {
 
     /**
      * Returns the id of the associated QuorumPeer, which will do for a unique
-     * id of this server. 
+     * id of this server.
      */
     @Override
     public long getServerId() {
         return self.getId();
-    }    
-    
+    }
+
     @Override
     protected void revalidateSession(ServerCnxn cnxn, long sessionId,
         int sessionTimeout) throws IOException {

@@ -34,7 +34,7 @@ public class ProposalRequestProcessor implements RequestProcessor {
         LoggerFactory.getLogger(ProposalRequestProcessor.class);
 
     LeaderZooKeeperServer zks;
-    
+
     RequestProcessor nextProcessor;
 
     SyncRequestProcessor syncProcessor;
@@ -46,39 +46,42 @@ public class ProposalRequestProcessor implements RequestProcessor {
         AckRequestProcessor ackProcessor = new AckRequestProcessor(zks.getLeader());
         syncProcessor = new SyncRequestProcessor(zks, ackProcessor);
     }
-    
+
     /**
      * initialize this processor
      */
     public void initialize() {
         syncProcessor.start();
     }
-    
+
     public void processRequest(Request request) throws RequestProcessorException {
         // LOG.warn("Ack>>> cxid = " + request.cxid + " type = " +
         // request.type + " id = " + request.sessionId);
         // request.addRQRec(">prop");
-                
-        
-        /* In the following IF-THEN-ELSE block, we process syncs on the leader. 
+
+
+        /* In the following IF-THEN-ELSE block, we process syncs on the leader.
          * If the sync is coming from a follower, then the follower
          * handler adds it to syncHandler. Otherwise, if it is a client of
-         * the leader that issued the sync command, then syncHandler won't 
-         * contain the handler. In this case, we add it to syncHandler, and 
+         * the leader that issued the sync command, then syncHandler won't
+         * contain the handler. In this case, we add it to syncHandler, and
          * call processRequest on the next processor.
          */
-        
+        //如果是走sync写的方法回走到这里
         if(request instanceof LearnerSyncRequest){
             zks.getLeader().processSync((LearnerSyncRequest)request);
         } else {
+                //先走commitProcessor 把processor写入磁盘
                 nextProcessor.processRequest(request);
             if (request.hdr != null) {
                 // We need to sync and get consensus on any transactions
                 try {
+                    //发给各个follower
                     zks.getLeader().propose(request);
                 } catch (XidRolloverException e) {
                     throw new RequestProcessorException(e.getMessage(), e);
                 }
+                //写本地事务日志
                 syncProcessor.processRequest(request);
             }
         }

@@ -52,7 +52,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     boolean isConnected() {
         return sockKey != null;
     }
-    
+
     /**
      * @return true if a packet was received
      * @throws InterruptedException
@@ -189,18 +189,19 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     @Override
     void cleanup() {
+        //此时就认为这个网络连接出现问题
         if (sockKey != null) {
             SocketChannel sock = (SocketChannel) sockKey.channel();
-            sockKey.cancel();
+            sockKey.cancel();//客户端主动断开连接
             try {
-                sock.socket().shutdownInput();
+                sock.socket().shutdownInput();//关闭输入流
             } catch (IOException e) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Ignoring exception during shutdown input", e);
                 }
             }
             try {
-                sock.socket().shutdownOutput();
+                sock.socket().shutdownOutput();//关闭输出流
             } catch (IOException e) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Ignoring exception during shutdown output",
@@ -208,14 +209,14 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
                 }
             }
             try {
-                sock.socket().close();
+                sock.socket().close();//关闭socket
             } catch (IOException e) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Ignoring exception during socket close", e);
                 }
             }
             try {
-                sock.close();
+                sock.close();//关闭
             } catch (IOException e) {
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("Ignoring exception during channel close", e);
@@ -231,7 +232,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
         }
         sockKey = null;
     }
- 
+
     @Override
     void close() {
         try {
@@ -246,7 +247,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             LOG.warn("Ignoring exception during selector close", e);
         }
     }
-    
+
     /**
      * create a socket channel.
      * @return the created socket channel
@@ -263,11 +264,11 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     /**
      * register with the selection and connect
-     * @param sock the {@link SocketChannel} 
+     * @param sock the {@link SocketChannel}
      * @param addr the address of remote host
      * @throws IOException
      */
-    void registerAndConnect(SocketChannel sock, InetSocketAddress addr) 
+    void registerAndConnect(SocketChannel sock, InetSocketAddress addr)
     throws IOException {
         sockKey = sock.register(selector, SelectionKey.OP_CONNECT);
         boolean immediateConnect = sock.connect(addr);
@@ -275,7 +276,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
             sendThread.primeConnection();
         }
     }
-    
+
     @Override
     void connect(InetSocketAddress addr) throws IOException {
         SocketChannel sock = createSock();
@@ -297,7 +298,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     /**
      * Returns the address to which the socket is connected.
-     * 
+     *
      * @return ip address of the remote side of the connection or null if not
      *         connected
      */
@@ -316,7 +317,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
 
     /**
      * Returns the local address to which the socket is bound.
-     * 
+     *
      * @return ip address of the remote side of the connection or null if not
      *         connected
      */
@@ -337,7 +338,7 @@ public class ClientCnxnSocketNIO extends ClientCnxnSocket {
     synchronized void wakeupCnxn() {
         selector.wakeup();
     }
-    
+
     @Override
     void doTransport(int waitTimeOut, List<Packet> pendingQueue, LinkedList<Packet> outgoingQueue,
                      ClientCnxn cnxn)
