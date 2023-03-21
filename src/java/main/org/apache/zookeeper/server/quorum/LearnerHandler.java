@@ -276,6 +276,7 @@ public class LearnerHandler extends Thread {
             long peerLastZxid;
             StateSummary ss = null;
             long zxid = qp.getZxid();
+            //follower和leader建立通信后等待超过Quorum数量的follower连接leader
             long newEpoch = leader.getEpochToPropose(this.getSid(), lastAcceptedEpoch);
 
             if (this.getVersion() < 0x10000) {
@@ -283,11 +284,13 @@ public class LearnerHandler extends Thread {
                 long epoch = ZxidUtils.getEpochFromZxid(zxid);
                 ss = new StateSummary(epoch, zxid);
                 // fake the message
+                //todo: 等待超过Quorum数量的follower连接leader
                 leader.waitForEpochAck(this.getSid(), ss);
             } else {
                 byte ver[] = new byte[4];
                 ByteBuffer.wrap(ver).putInt(0x10000);
                 QuorumPacket newEpochPacket = new QuorumPacket(Leader.LEADERINFO, ZxidUtils.makeZxid(newEpoch, 0), ver, null);
+                //向follower发送本次的zxid
                 oa.writeRecord(newEpochPacket, "packet");
                 bufferedOutput.flush();
                 QuorumPacket ackEpochPacket = new QuorumPacket();
@@ -299,6 +302,7 @@ public class LearnerHandler extends Thread {
 				}
                 ByteBuffer bbepoch = ByteBuffer.wrap(ackEpochPacket.getData());
                 ss = new StateSummary(bbepoch.getInt(), ackEpochPacket.getZxid());
+                //等待超过quorum数量的同步好leader的zxid
                 leader.waitForEpochAck(this.getSid(), ss);
             }
             peerLastZxid = ss.getLastZxid();
@@ -372,6 +376,7 @@ public class LearnerHandler extends Thread {
                                 queuePacket(qcommit);
                             }
                         }
+                        //如果follower的zxid大于leader的zxid 截断自己一部分日志
                     } else if (peerLastZxid > maxCommittedLog) {
                         LOG.debug("Sending TRUNC to follower zxidToSend=0x{} updates=0x{}",
                                 Long.toHexString(maxCommittedLog),
@@ -398,6 +403,7 @@ public class LearnerHandler extends Thread {
                 }
 
                 LOG.info("Sending " + Leader.getPacketType(packetToSend));
+                //把内存中的数据写到queuedPackets中
                 leaderLastZxid = leader.startForwarding(this, updates);
 
             } finally {

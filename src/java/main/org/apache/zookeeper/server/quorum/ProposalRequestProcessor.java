@@ -71,7 +71,8 @@ public class ProposalRequestProcessor implements RequestProcessor {
         if(request instanceof LearnerSyncRequest){
             zks.getLeader().processSync((LearnerSyncRequest)request);
         } else {
-                //先走commitProcessor 把processor写入磁盘
+                //先把请求放入到CommitProcessor nextPending 中等待commit
+                //在这里并不阻塞往下走
                 nextProcessor.processRequest(request);
             if (request.hdr != null) {
                 // We need to sync and get consensus on any transactions

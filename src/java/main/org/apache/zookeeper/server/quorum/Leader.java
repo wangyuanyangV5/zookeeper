@@ -352,8 +352,8 @@ public class Leader {
 
         try {
             self.tick = 0;
-            zk.loadData();
-
+            zk.loadData();//恢复内存数据
+            //记录本次成为leader时的通信epoch和开始的 事务id(zxid)
             leaderStateSummary = new StateSummary(self.getCurrentEpoch(), zk.getLastProcessedZxid());
 
             // Start thread that waits for connection requests from
@@ -383,7 +383,7 @@ public class Leader {
             outstandingProposals.put(newLeaderProposal.packet.getZxid(), newLeaderProposal);
             newLeaderProposal.ackSet.add(self.getId());
 
-            waitForEpochAck(self.getId(), leaderStateSummary);
+            waitForEpochAck(self.getId(), leaderStateSummary);//阻塞等待follower建立连接
             self.setCurrentEpoch(epoch);
 
             // We have to get at least a majority of servers in sync with
@@ -591,6 +591,7 @@ public class Leader {
                 commit(zxid);
                 inform(p);
                 zk.commitProcessor.commit(p.request);
+                //如果之前follower发送过sync请求过来，当leader数据和follower数据同步后把sync请求返回
                 if(pendingSyncs.containsKey(zxid)){
                     for(LearnerSyncRequest r: pendingSyncs.remove(zxid)) {
                         sendSync(r);
@@ -601,6 +602,7 @@ public class Leader {
                 lastCommitted = zxid;
                 LOG.info("Have quorum of supporters; starting up and setting last processed zxid: 0x{}",
                         Long.toHexString(zk.getZxid()));
+                //已经有超过quorum数量的follower发送了ack zk启动
                 zk.startup();
                 zk.getZKDatabase().setlastProcessedZxid(zk.getZxid());
             }
@@ -760,7 +762,7 @@ public class Leader {
         }
         QuorumPacket pp = new QuorumPacket(Leader.PROPOSAL, request.zxid,
                 baos.toByteArray(), null);
-
+        //开启一个事务消息
         Proposal p = new Proposal();
         p.packet = pp;
         p.request = request;
@@ -770,6 +772,7 @@ public class Leader {
             }
 
             lastProposed = p.packet.getZxid();
+            //把事务消息加入到向集群follower同步的map中
             outstandingProposals.put(lastProposed, p);
             sendPacket(pp);
         }

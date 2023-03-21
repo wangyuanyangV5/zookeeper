@@ -57,11 +57,11 @@ import org.apache.zookeeper.txn.TxnHeader;
  * and snapshots from the disk.
  */
 public class ZKDatabase {
-    
+
     private static final Logger LOG = LoggerFactory.getLogger(ZKDatabase.class);
-    
+
     /**
-     * make sure on a clear you take care of 
+     * make sure on a clear you take care of
      * all these members.
      */
     protected DataTree dataTree;
@@ -73,7 +73,7 @@ public class ZKDatabase {
     protected LinkedList<Proposal> committedLog = new LinkedList<Proposal>();
     protected ReentrantReadWriteLock logLock = new ReentrantReadWriteLock();
     volatile private boolean initialized = false;
-    
+
     /**
      * the filetxnsnaplog that this zk database
      * maps to. There is a one to one relationship
@@ -85,7 +85,7 @@ public class ZKDatabase {
         sessionsWithTimeouts = new ConcurrentHashMap<Long, Integer>();
         this.snapLog = snapLog;
     }
-    
+
     /**
      * checks to see if the zk database has been
      * initialized or not.
@@ -94,23 +94,23 @@ public class ZKDatabase {
     public boolean isInitialized() {
         return initialized;
     }
-    
+
     /**
-     * clear the zkdatabase. 
-     * Note to developers - be careful to see that 
+     * clear the zkdatabase.
+     * Note to developers - be careful to see that
      * the clear method does clear out all the
      * data structures in zkdatabase.
      */
     public void clear() {
         minCommittedLog = 0;
         maxCommittedLog = 0;
-        /* to be safe we just create a new 
+        /* to be safe we just create a new
          * datatree.
          */
         dataTree = new DataTree();
         sessionsWithTimeouts.clear();
         WriteLock lock = logLock.writeLock();
-        try {            
+        try {
             lock.lock();
             committedLog.clear();
         } finally {
@@ -118,7 +118,7 @@ public class ZKDatabase {
         }
         initialized = false;
     }
-    
+
     /**
      * the datatree for this zkdatabase
      * @return the datatree for this zkdatabase
@@ -126,7 +126,7 @@ public class ZKDatabase {
     public DataTree getDataTree() {
         return this.dataTree;
     }
- 
+
     /**
      * the committed log for this zk database
      * @return the committed log for this zkdatabase
@@ -134,8 +134,8 @@ public class ZKDatabase {
     public long getmaxCommittedLog() {
         return maxCommittedLog;
     }
-    
-    
+
+
     /**
      * the minimum committed transaction log
      * available in memory
@@ -153,7 +153,7 @@ public class ZKDatabase {
     public ReentrantReadWriteLock getLogLock() {
         return logLock;
     }
-    
+
 
     public synchronized LinkedList<Proposal> getCommittedLog() {
         ReadLock rl = logLock.readLock();
@@ -165,10 +165,10 @@ public class ZKDatabase {
             } finally {
                 rl.unlock();
             }
-        } 
+        }
         return this.committedLog;
-    }      
-    
+    }
+
     /**
      * get the last processed zxid from a datatree
      * @return the last processed zxid of a datatree
@@ -176,7 +176,7 @@ public class ZKDatabase {
     public long getDataTreeLastProcessedZxid() {
         return dataTree.lastProcessedZxid;
     }
-    
+
     /**
      * set the datatree initialized or not
      * @param b set the datatree initialized to b
@@ -184,7 +184,7 @@ public class ZKDatabase {
     public void setDataTreeInit(boolean b) {
         dataTree.initialized = b;
     }
-    
+
     /**
      * return the sessions in the datatree
      * @return the data tree sessions
@@ -192,7 +192,7 @@ public class ZKDatabase {
     public Collection<Long> getSessions() {
         return dataTree.getSessions();
     }
-    
+
     /**
      * get sessions with timeouts
      * @return the hashmap of sessions with timeouts
@@ -201,14 +201,14 @@ public class ZKDatabase {
         return sessionsWithTimeouts;
     }
 
-    
+
     /**
-     * load the database from the disk onto memory and also add 
+     * load the database from the disk onto memory and also add
      * the transactions to the committedlog in memory.
      * @return the last valid zxid on disk
      * @throws IOException
      */
-    public long loadDataBase() throws IOException {
+    public long  loadDataBase() throws IOException {
         PlayBackListener listener=new PlayBackListener(){
             public void onTxnLoaded(TxnHeader hdr,Record txn){
                 Request r = new Request(null, 0, hdr.getCxid(),hdr.getType(),
@@ -219,12 +219,12 @@ public class ZKDatabase {
                 addCommittedProposal(r);
             }
         };
-        
+
         long zxid = snapLog.restore(dataTree,sessionsWithTimeouts,listener);
         initialized = true;
         return zxid;
     }
-    
+
     /**
      * maintains a list of last <i>committedLog</i>
      *  or so committed requests. This is used for
@@ -267,7 +267,7 @@ public class ZKDatabase {
         }
     }
 
-    
+
     /**
      * remove a cnxn from the datatree
      * @param cnxn the cnxn to remove from the datatree
@@ -302,8 +302,8 @@ public class ZKDatabase {
     }
 
     /**
-     * the paths for  ephemeral session id 
-     * @param sessionId the session id for which paths match to 
+     * the paths for  ephemeral session id
+     * @param sessionId the session id for which paths match to
      * @return the paths for a session id
      */
     public HashSet<String> getEphemerals(long sessionId) {
@@ -330,7 +330,7 @@ public class ZKDatabase {
     }
 
     /**
-     * stat the path 
+     * stat the path
      * @param path the path for which stat is to be done
      * @param serverCnxn the servercnxn attached to this request
      * @return the stat of this node
@@ -339,7 +339,7 @@ public class ZKDatabase {
     public Stat statNode(String path, ServerCnxn serverCnxn) throws KeeperException.NoNodeException {
         return dataTree.statNode(path, serverCnxn);
     }
-    
+
     /**
      * get the datanode for this path
      * @param path the path to lookup
@@ -359,14 +359,14 @@ public class ZKDatabase {
     }
 
     /**
-     * get data and stat for a path 
+     * get data and stat for a path
      * @param path the path being queried
      * @param stat the stat for this path
      * @param watcher the watcher function
      * @return
      * @throws KeeperException.NoNodeException
      */
-    public byte[] getData(String path, Stat stat, Watcher watcher) 
+    public byte[] getData(String path, Stat stat, Watcher watcher)
     throws KeeperException.NoNodeException {
         return dataTree.getData(path, stat, watcher);
     }
@@ -383,7 +383,7 @@ public class ZKDatabase {
             List<String> existWatches, List<String> childWatches, Watcher watcher) {
         dataTree.setWatches(relativeZxid, dataWatches, existWatches, childWatches, watcher);
     }
-    
+
     /**
      * get acl for a path
      * @param path the path to query for acl
@@ -444,9 +444,9 @@ public class ZKDatabase {
         loadDataBase();
         return true;
     }
-    
+
     /**
-     * deserialize a snapshot from an input archive 
+     * deserialize a snapshot from an input archive
      * @param ia the input archive you want to deserialize from
      * @throws IOException
      */
@@ -454,8 +454,8 @@ public class ZKDatabase {
         clear();
         SerializeUtils.deserializeSnapshot(getDataTree(),ia,getSessionWithTimeOuts());
         initialized = true;
-    }   
-    
+    }
+
     /**
      * serialize the snapshot
      * @param oa the output archive to which the snapshot needs to be serialized
@@ -468,7 +468,7 @@ public class ZKDatabase {
     }
 
     /**
-     * append to the underlying transaction log 
+     * append to the underlying transaction log
      * @param si the request to append
      * @return true if the append was succesfull and false if not
      */
@@ -490,7 +490,7 @@ public class ZKDatabase {
     public void commit() throws IOException {
         this.snapLog.commit();
     }
-    
+
     /**
      * close this database. free the resources
      * @throws IOException
@@ -498,5 +498,5 @@ public class ZKDatabase {
     public void close() throws IOException {
         this.snapLog.close();
     }
-    
+
 }

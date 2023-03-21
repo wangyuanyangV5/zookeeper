@@ -67,7 +67,7 @@ public class CommitProcessor extends Thread implements RequestProcessor {
     @Override
     public void run() {
         try {
-            Request nextPending = null;            
+            Request nextPending = null;
             while (!finished) {
                 int len = toProcess.size();
                 for (int i = 0; i < len; i++) {
@@ -77,11 +77,13 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                 synchronized (this) {
                     if ((queuedRequests.size() == 0 || nextPending != null)
                             && committedRequests.size() == 0) {
+                        //等待请求接收到ack
                         wait();
                         continue;
                     }
                     // First check and see if the commit came in for the pending
-                    // request
+                    // request Quorum
+                    //leader收到超过quorum 数量的follower发送的ack
                     if ((queuedRequests.size() == 0 || nextPending != null)
                             && committedRequests.size() > 0) {
                         Request r = committedRequests.remove();
@@ -99,6 +101,7 @@ public class CommitProcessor extends Thread implements RequestProcessor {
                             nextPending.hdr = r.hdr;
                             nextPending.txn = r.txn;
                             nextPending.zxid = r.zxid;
+                            //把请求加入到toProcess 中
                             toProcess.add(nextPending);
                             nextPending = null;
                         } else {
@@ -170,7 +173,7 @@ public class CommitProcessor extends Thread implements RequestProcessor {
         if (LOG.isDebugEnabled()) {
             LOG.debug("Processing request:: " + request);
         }
-        
+
         if (!finished) {
             queuedRequests.add(request);
             notifyAll();
